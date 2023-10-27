@@ -93,10 +93,24 @@ public class Orchestrator {
 		this.properties = Utils.getProperties(TestRunner.getExternalResourcePath() + "/config/config.properties");
 		Utils.setupLogger(System.getProperty("user.dir") + "/" + System.getProperty("testng.outpur.dir") + "/"
 				+ this.properties.getProperty("ivv._path.auditlog"));
-		htmlReporter = new ExtentHtmlReporter(
+		String emailableReportName = null;
+		if (TestRunner.checkRunType().equalsIgnoreCase("IDE")) {
+			emailableReportName = System.getProperty("user.dir") + "/" + System.getProperty("testng.outpur.dir") + "/"
+					+ this.properties.getProperty("ivv._path.reports")
+					+ BaseTestCase.generateRandomAlphaNumericString(7) + ".html";
+			logger.info("Extent Report path :" + emailableReportName);
+		} else if (TestRunner.checkRunType().equalsIgnoreCase("JAR")) {
+			emailableReportName = System.getProperty("user.dir") + "/"
+					+ this.properties.getProperty("ivv._path.reports")
+					+ BaseTestCase.generateRandomAlphaNumericString(7) + ".html";
+			logger.info("Extent Report path :" + emailableReportName);
+		}
 
-				System.getProperty("user.dir") + "/" + System.getProperty("testng.outpur.dir") + "/"
-						+ this.properties.getProperty("ivv._path.reports"));
+		BaseTestCaseUtil.setExtentReportName(emailableReportName);
+
+		htmlReporter = new ExtentHtmlReporter(BaseTestCaseUtil.getExtentReportName());
+
+		;
 		extent = new ExtentReports();
 
 		extent.attachReporter(htmlReporter);
@@ -168,27 +182,27 @@ public class Orchestrator {
 		ParserInputDTO parserInputDTO = new ParserInputDTO();
 		parserInputDTO.setConfigProperties(properties);
 		parserInputDTO.setDocumentsFolder(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.documents.folder"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.documents.folder"));
 		parserInputDTO.setBiometricsFolder(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.biometrics.folder"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.biometrics.folder"));
 		parserInputDTO.setPersonaSheet(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.persona.sheet"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.persona.sheet"));
 		parserInputDTO.setScenarioSheet(scenarioSheet);
 
 		parserInputDTO.setRcSheet(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.rcpersona.sheet"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.rcpersona.sheet"));
 		parserInputDTO.setPartnerSheet(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.partner.sheet"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.partner.sheet"));
 		parserInputDTO.setIdObjectSchema(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.idobject"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.idobject"));
 		parserInputDTO.setDocumentsSheet(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.documents.sheet"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.documents.sheet"));
 		parserInputDTO.setBiometricsSheet(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.biometrics.sheet"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.biometrics.sheet"));
 		parserInputDTO.setGlobalsSheet(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.globals.sheet"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.globals.sheet"));
 		parserInputDTO.setConfigsSheet(
-				TestRunner.getGlobalResourcePath() + "/" + properties.getProperty("ivv.path.configs.sheet"));
+				TestRunner.getLocalResourcePath() + "/" + properties.getProperty("ivv.path.configs.sheet"));
 
 		Parser parser = new Parser(parserInputDTO);
 		DataGenerator dg = new DataGenerator();
@@ -251,16 +265,18 @@ public class Orchestrator {
 			Properties properties) throws SQLException, InterruptedException, ClassNotFoundException,
 			IllegalAccessException, InstantiationException {
 		// Another scenario execution kicked-off before BEFORE_SUITE execution
-
-		if (ConfigManager.isInTobeSkippedList("S-" + scenario.getId())) {
-			updateRunStatistics(scenario);
-			throw new SkipException("Skipping scenario due to known platform issue");
-		}
-
-		if (ConfigManager.isInTobeSkippedList("A-" + scenario.getId())) {
-			updateRunStatistics(scenario);
-			throw new SkipException("Skipping scenario due to known Automation issue");
-		}
+		//
+		// if (ConfigManager.isInTobeSkippedList("S-" + scenario.getId())) {
+		// updateRunStatistics(scenario);
+		// throw new SkipException("S-" + scenario.getId() + ": Skipping scenario due to
+		// known platform issue");
+		// }
+		//
+		// if (ConfigManager.isInTobeSkippedList("A-" + scenario.getId())) {
+		// updateRunStatistics(scenario);
+		// throw new SkipException("A-" + scenario.getId() + ": Skipping scenario due to
+		// known Automation issue");
+		// }
 
 		if (!scenario.getId().equalsIgnoreCase("0")) {
 
@@ -311,6 +327,7 @@ public class Orchestrator {
 		message = "Scenario_" + scenario.getId() + ": " + scenario.getDescription();
 		logger.info("-- *** Scenario " + scenario.getId() + ": " + scenario.getDescription() + " *** --");
 		ExtentTest extentTest = extent.createTest("Scenario_" + scenario.getId() + ": " + scenario.getDescription());
+
 		Store store = new Store();
 		store.setConfigs(configs);
 		store.setGlobals(globals);
@@ -328,6 +345,31 @@ public class Orchestrator {
 			logger.info(identifier);
 
 			try {
+				// Check whether the scenario is in the defined skipped list
+				if (ConfigManager.isInTobeSkippedList("S-" + scenario.getId())) {
+					extentTest.skip("S-" + scenario.getId() + ": Skipping scenario due to known platform issue");
+					updateRunStatistics(scenario);
+					throw new SkipException(
+							"S-" + scenario.getId() + ": Skipping scenario due to known platform issue");
+				}
+				if (ConfigManager.isInTobeSkippedList("A-" + scenario.getId())) {
+					extentTest.skip("A-" + scenario.getId() + ": Skipping scenario due to known Automation issue");
+					updateRunStatistics(scenario);
+					throw new SkipException(
+							"A-" + scenario.getId() + ": Skipping scenario due to known Automation issue");
+				}
+
+				// Check whether the scenario is in the defined execute list
+				if (!scenario.getId().equalsIgnoreCase("0") && !scenario.getId().equalsIgnoreCase("AFTER_SUITE")) {
+					if (!ConfigManager.isInTobeExecuteList(scenario.getId())) {
+						extentTest.skip(scenario.getId()
+								+ ": Skipping scenario as it is not in the scneario to be executed list");
+						updateRunStatistics(scenario);
+						throw new SkipException(scenario.getId()
+								+ ": Skipping scenario as it is not in the scneario to be executed list");
+					}
+				}
+
 				extentTest.info(identifier + " - running"); //
 				extentTest.info("parameters: " + step.getParameters().toString());
 				StepInterface st = getInstanceOf(step);
@@ -367,6 +409,7 @@ public class Orchestrator {
 					extentTest.pass(identifier + " - passed");
 				}
 			} catch (SkipException e) {
+				extentTest.skip(identifier + " - skipped");
 				updateRunStatistics(scenario);
 				logger.error(e.getMessage());
 				Reporter.log(e.getMessage());
@@ -395,6 +438,7 @@ public class Orchestrator {
 			} catch (RigInternalError e) {
 				extentTest.error(identifier + " - RigInternalError --> " + e.getMessage());
 				logger.error(e.getMessage());
+				Reporter.log(e.getMessage());
 				updateRunStatistics(scenario);
 				Assert.assertTrue(false);
 				return;
@@ -406,8 +450,11 @@ public class Orchestrator {
 				Assert.assertTrue(false);
 				return;
 			} catch (FeatureNotSupportedError e) {
+				extentTest.error(identifier + " - FeatureNotSupportedError --> " + e.toString());
 				logger.warn(e.getMessage());
 				Reporter.log(e.getMessage());
+//				Assert.assertTrue(false);
+
 			}
 
 		}
@@ -458,49 +505,23 @@ public class Orchestrator {
 	}
 
 	public static String getScenarioSheet() throws RigInternalError {
-		Boolean convesionRequired = true;
 
-		// Check first for the JSON file
-		String scenarioSheet = ConfigManager.getmountPathForScenario() + "/scenarios/" + "scenarios-"
-				+ BaseTestCase.testLevel + "-" + BaseTestCase.environment + ".json";
+		String scenarioSheet = MosipTestRunner.getGlobalResourcePath() + "/config/scenarios.json";
+		logger.info("Scenario sheet path is: "+ scenarioSheet);
 		Path path = Paths.get(scenarioSheet);
 		if (!Files.exists(path)) {
-			scenarioSheet = ConfigManager.getmountPathForScenario() + "/default/" + "scenarios-"
-					+ BaseTestCase.testLevel + "-" + "default" + ".json";
-
-			// default file JSON exist?
-			path = Paths.get(scenarioSheet);
-			if (!Files.exists(path)) {
-				// Check for the CSV file
-				scenarioSheet = ConfigManager.getmountPathForScenario() + "/scenarios/" + "scenarios-"
-						+ BaseTestCase.testLevel + "-" + BaseTestCase.environment + ".csv";
-
-				path = Paths.get(scenarioSheet);
-				if (!Files.exists(path)) {
-
-					// default file CSV exist?
-					scenarioSheet = ConfigManager.getmountPathForScenario() + "/default/" + "scenarios-"
-							+ BaseTestCase.testLevel + "-" + "default" + ".csv";
-					path = Paths.get(scenarioSheet);
-					if (!Files.exists(path)) {
-						logger.info("Scenario sheet path is: " + path);
-						throw new RigInternalError("ScenarioSheet missing");
-					}
-				}
-				convesionRequired = false;
-			}
+			logger.info("Scenario sheet path is: " + path);
+			throw new RigInternalError("ScenarioSheet missing");
 		}
 
-		if (convesionRequired) {
-			scenarioSheet = JsonToCsvConverter(scenarioSheet);
-			if (scenarioSheet.isEmpty())
-				throw new RigInternalError("Failed to generate CSV from JSON file, for internal processing");
-		}
+		scenarioSheet = JsonToCsvConverter(scenarioSheet);
+		if (scenarioSheet.isEmpty())
+			throw new RigInternalError("Failed to generate CSV from JSON file, for internal processing");
 		return scenarioSheet;
 	}
 
 	public static String JsonToCsvConverter(String jsonFilePath) {
-		String tempCSVPath = MosipTestRunner.getResourcePath() + "/scenarios.csv";
+		String tempCSVPath = MosipTestRunner.getGlobalResourcePath() + "/scenarios.csv";
 		int maxSteps = 151;
 		try {
 			ObjectMapper objectMapper = new ObjectMapper();

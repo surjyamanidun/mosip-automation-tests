@@ -27,11 +27,11 @@ public class TestRunner {
 	public static String jarUrl = TestRunner.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 
 	public static void main(String[] args) {
-		
+		removeOldMosipTestTestResource();
 		if (checkRunType().equalsIgnoreCase("JAR")) {
-			removeOldMosipTestTestResource();
 			extractResourceFromJar();
 		}
+		
 		copyTestResources();
 		BaseTestCase.environment = System.getProperty("env.user");
 		BaseTestCase.ApplnURI = System.getProperty("env.endpoint");
@@ -72,10 +72,10 @@ public class TestRunner {
 		String os = System.getProperty("os.name");
 		LOGGER.info(os);
 		if (checkRunType().contains("IDE") || os.toLowerCase().contains("windows") == true) {
-			homeDir = new File(TestResources.getResourcePath() + "testngFile");
+			homeDir = new File(TestResources.getResourcePath().replace("/MosipTestResource/MosipTemporaryTestResource", "") + "testngFile");
 			LOGGER.info("IDE Home Dir=" + homeDir);
 		} else {
-			homeDir = new File(System.getProperty("user.dir") + "/MosipTestResource/testngFile");
+			homeDir = new File(System.getProperty("user.dir") + "/"+TestResources.resourceTestFolderName + "/" + TestResources.resourceFolderName +"/testngFile");
 			LOGGER.info("Jar Home Dir=" + homeDir);
 		}
 
@@ -140,7 +140,6 @@ public class TestRunner {
 		getListOfFilesFromJarAndCopyToExternalResource("idaData/");
 		getListOfFilesFromJarAndCopyToExternalResource("ivv_masterdata/");
 		getListOfFilesFromJarAndCopyToExternalResource("syncdata/");
-
 		getListOfFilesFromJarAndCopyToExternalResource("regproc/");
 	}
 
@@ -183,13 +182,26 @@ public class TestRunner {
 	        }
 	    }
 	}
+	
+	
+	public static String getLocalResourcePath() {
+		if (checkRunType().equalsIgnoreCase("JAR")) {
+			return new File(jarUrl).getParentFile().getAbsolutePath() +"/"+TestResources.resourceTestFolderName+  "/"+TestResources.resourceFolderName;
+		} else if (checkRunType().equalsIgnoreCase("IDE")) {
+			String path = new File(TestRunner.class.getClassLoader().getResource("").getPath()).getAbsolutePath();
+			if (path.contains("test-classes"))
+				path = path.replace("test-classes", "classes");
+			return path;
+		}
+		return "Global Resource File Path Not Found";
+	}
+
 
 	public static String getGlobalResourcePath() {
 		if (checkRunType().equalsIgnoreCase("JAR")) {
-			return new File(jarUrl).getParentFile().getAbsolutePath() + "/MosipTestResource".toString();
+			return new File(jarUrl).getParentFile().getAbsolutePath() +"/"+TestResources.resourceTestFolderName+  "/"+TestResources.resourceFolderName;
 		} else if (checkRunType().equalsIgnoreCase("IDE")) {
-			String path = new File(TestRunner.class.getClassLoader().getResource("").getPath()).getAbsolutePath()
-					.toString();
+			String path = new File(TestRunner.class.getClassLoader().getResource("").getPath()).getAbsolutePath()+"/"+TestResources.resourceTestFolderName+  "/"+TestResources.resourceFolderName;
 			if (path.contains("test-classes"))
 				path = path.replace("test-classes", "classes");
 			return path;
@@ -200,7 +212,7 @@ public class TestRunner {
 	private static boolean copyFilesFromJarToOutsideResource(String path) {
 		try {
 			File resourceFile = new File(TestRunner.jarUrl).getParentFile();
-			File destinationFile = new File(resourceFile.getAbsolutePath() + "/MosipTestResource/" + path);
+			File destinationFile = new File(resourceFile.getAbsolutePath() + "/"+TestResources.resourceTestFolderName+  "/"+TestResources.resourceFolderName + "/"+ path);
 			org.apache.commons.io.FileUtils.copyInputStreamToFile(TestRunner.class.getResourceAsStream("/" + path),
 					destinationFile);
 			return true;

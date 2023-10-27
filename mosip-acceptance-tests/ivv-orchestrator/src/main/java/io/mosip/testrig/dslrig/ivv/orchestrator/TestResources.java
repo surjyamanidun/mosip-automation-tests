@@ -10,7 +10,8 @@ import org.apache.log4j.Logger;
 
 public class TestResources {
 	public static Logger logger=Logger.getLogger(TestResources.class);
-	private static String resourceFolderName="MosipTemporaryTestResource";;
+	public static String resourceFolderName="MosipTemporaryTestResource";;
+	public static String resourceTestFolderName="MosipTestResource";;
 	public static String jarUrl = TestResources.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 
 	public static void copyPreRegTestResource() {
@@ -42,16 +43,19 @@ public class TestResources {
 	}
 	public static void copyTestResource(String resPath) {
 		try {
-			File source = new File(TestResources.getGlobalResourcePaths() + resPath);
-			File destination = new File(TestResources.getGlobalResourcePaths() + "/"+TestResources.resourceFolderName);
+			File source = new File(TestResources.getGlobalResourcePaths().replace("MosipTestResource/MosipTemporaryTestResource", "") + resPath);
+		//D:\gitauto\mosip-automation-tests\mosip-acceptance-tests\ivv-orchestrator\target\classes\idaData
+			File destination = new File(TestResources.getGlobalResourcePaths());
+			//D:\gitauto\mosip-automation-tests\mosip-acceptance-tests\ivv-orchestrator\target\classes\MosipTestResource\MosipTemporaryTestResource
 			FileUtils.copyDirectoryToDirectory(source, destination);
-			logger.info("Copied "+resPath+" the preReg test resource successfully to "+destination);
+			logger.info("source file path :" +source);
+			logger.info("resPath: "+resPath+" destination: "+destination);
 		} catch (Exception e) {
 			logger.error("Exception occured while copying the file: "+e.getMessage());
 		}
 	}
 	public static String getResourcePath() {
-		return TestRunner.getGlobalResourcePath()+"/"+TestResources.resourceFolderName+"/";
+		return TestRunner.getGlobalResourcePath()+"/";
 	}
 	public static String getGlobalResourcePaths() {
 		return TestRunner.getGlobalResourcePath();
